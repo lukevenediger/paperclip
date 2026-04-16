@@ -7,6 +7,13 @@ export function assertBoard(req: Request) {
   }
 }
 
+export function assertSessionBoard(req: Request) {
+  assertBoard(req);
+  if (req.actor.source !== "session" && req.actor.source !== "local_implicit") {
+    throw forbidden("Session authentication required — API keys cannot perform this action");
+  }
+}
+
 export function assertInstanceAdmin(req: Request) {
   assertBoard(req);
   if (req.actor.source === "local_implicit" || req.actor.isInstanceAdmin) {

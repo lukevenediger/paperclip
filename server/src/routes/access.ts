@@ -20,6 +20,7 @@ import {
 } from "@paperclipai/db";
 import {
   acceptInviteSchema,
+  createBoardApiKeySchema,
   createCliAuthChallengeSchema,
   claimJoinRequestApiKeySchema,
   createCompanyInviteSchema,
@@ -48,7 +49,7 @@ import {
   logActivity,
   notifyHireApproved
 } from "../services/index.js";
-import { assertCompanyAccess } from "./authz.js";
+import { assertCompanyAccess, assertSessionBoard, getActorInfo } from "./authz.js";
 import {
   claimBoardOwnership,
   inspectBoardClaimChallenge
@@ -1793,6 +1794,89 @@ export function accessRoutes(
       });
     }
     res.json({ revoked: true, keyId: key.id });
+  });
+
+  // ── Board API Keys (self-service) ──────────────────────────────
+
+  router.get("/board-api-keys", async (req, res) => {
+    assertSessionBoard(req);
+    const userId = req.actor.userId!;
+    const includeRevoked = req.query.includeRevoked === "true";
+    const keys = await boardAuth.listBoardApiKeys(userId, includeRevoked);
+    res.json(
+      keys.map((k) => ({
+        id: k.id,
+        name: k.name,
+        lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
+        expiresAt: k.expiresAt?.toISOString() ?? null,
+        revokedAt: k.revokedAt?.toISOString() ?? null,
+        createdAt: k.createdAt.toISOString(),
+      })),
+    );
+  });
+
+  router.post(
+    "/board-api-keys",
+    validate(createBoardApiKeySchema),
+    async (req, res) => {
+      assertSessionBoard(req);
+      const userId = req.actor.userId!;
+      const { name, expiresInDays } = req.body;
+      const created = await boardAuth.createBoardApiKeyForUser(
+        userId,
+        name,
+        expiresInDays,
+      );
+      const actor = getActorInfo(req);
+      const companyIds = await boardAuth.resolveBoardActivityCompanyIds({
+        userId,
+      });
+      for (const companyId of companyIds) {
+        await logActivity(db, {
+          companyId,
+          actorType: actor.actorType,
+          actorId: actor.actorId,
+          action: "board_api_key.created",
+          entityType: "user",
+          entityId: userId,
+          details: { boardApiKeyId: created.id, name },
+        });
+      }
+      res.status(201).json({
+        id: created.id,
+        name: created.name,
+        token: created.token,
+        expiresAt: created.expiresAt?.toISOString() ?? null,
+        createdAt: created.createdAt.toISOString(),
+      });
+    },
+  );
+
+  router.delete("/board-api-keys/:id", async (req, res) => {
+    assertSessionBoard(req);
+    const userId = req.actor.userId!;
+    const keyId = req.params.id as string;
+    const revoked = await boardAuth.revokeBoardApiKey(keyId);
+    if (!revoked || revoked.userId !== userId) {
+      throw notFound("Board API key not found");
+    }
+    const actor = getActorInfo(req);
+    const companyIds = await boardAuth.resolveBoardActivityCompanyIds({
+      userId,
+      boardApiKeyId: keyId,
+    });
+    for (const companyId of companyIds) {
+      await logActivity(db, {
+        companyId,
+        actorType: actor.actorType,
+        actorId: actor.actorId,
+        action: "board_api_key.revoked",
+        entityType: "user",
+        entityId: userId,
+        details: { boardApiKeyId: keyId, revokedVia: "board_ui" },
+      });
+    }
+    res.json({ revoked: true, keyId });
   });
 
   async function assertCompanyPermission(

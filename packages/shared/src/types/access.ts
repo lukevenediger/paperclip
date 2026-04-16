@@ -79,3 +79,20 @@ export interface InstanceUserRoleGrant {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface BoardApiKeySummary {
+  id: string;
+  name: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface BoardApiKeyCreated {
+  id: string;
+  name: string;
+  token: string;
+  expiresAt: string | null;
+  createdAt: string;
+}

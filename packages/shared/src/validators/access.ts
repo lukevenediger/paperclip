@@ -90,3 +90,10 @@ export const updateUserCompanyAccessSchema = z.object({
 });
 
 export type UpdateUserCompanyAccess = z.infer<typeof updateUserCompanyAccessSchema>;
+
+export const createBoardApiKeySchema = z.object({
+  name: z.string().min(1).max(120),
+  expiresInDays: z.number().int().positive().max(3650).optional().nullable(),
+});
+
+export type CreateBoardApiKey = z.infer<typeof createBoardApiKeySchema>;

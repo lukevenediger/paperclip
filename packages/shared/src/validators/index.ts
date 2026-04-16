@@ -260,6 +260,7 @@ export {
   resolveCliAuthChallengeSchema,
   updateMemberPermissionsSchema,
   updateUserCompanyAccessSchema,
+  createBoardApiKeySchema,
   type CreateCompanyInvite,
   type CreateOpenClawInvitePrompt,
   type AcceptInvite,
@@ -270,6 +271,7 @@ export {
   type ResolveCliAuthChallenge,
   type UpdateMemberPermissions,
   type UpdateUserCompanyAccess,
+  type CreateBoardApiKey,
 } from "./access.js";
 
 export {
