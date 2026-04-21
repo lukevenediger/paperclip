@@ -2,6 +2,21 @@
 
 Board API keys let you call the Paperclip REST API from external services without a browser session. Each key is tied to a user account and inherits that user's permissions and company access.
 
+## Enabling the Feature
+
+**Board API keys are disabled by default as a safety measure.** To turn them on:
+
+1. Navigate to **Instance Settings > General**.
+2. Toggle **Board API keys** on.
+
+When disabled:
+- New keys cannot be created (POST `/api/board-api-keys` returns 403).
+- Existing keys stop authenticating immediately — bearer tokens using them will fail auth.
+- The API Keys settings page shows a banner explaining the feature is off.
+- Existing keys remain visible in the API Keys page so you can revoke them for cleanup.
+
+Turn the toggle off to instantly kill all board API key access instance-wide without touching individual keys.
+
 ## How It Works
 
 When you create a board API key through the Settings UI, Paperclip generates a `pcp_board_...` token. The plaintext token is shown once at creation time — after that, only a SHA-256 hash is stored. Every API request with the token in an `Authorization: Bearer` header is resolved to the creating user's identity, company memberships, and instance-admin status.
@@ -10,6 +25,7 @@ Board API keys reuse the same authentication path as CLI-issued board keys. The 
 
 ### Security Model
 
+- **Off by default.** Feature must be explicitly enabled in Instance Settings > General. Flipping it off instantly invalidates every existing key.
 - **Token shown once.** Only the SHA-256 hash is persisted. If you lose the token, revoke and recreate.
 - **Privilege laundering blocked.** A request authenticated via a board API key cannot create or list other board API keys. Only session-authenticated users (browser login or `local_implicit` mode) can manage keys. This prevents a leaked key from minting new keys.
 - **User lifecycle.** Keys are tied to `authUsers.id` with `ON DELETE CASCADE`. If the user is removed, all their keys are deleted.

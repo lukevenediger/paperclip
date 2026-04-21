@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { BoardApiKeySummary } from "@paperclipai/shared";
-import { Copy, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Copy, KeyRound, Plus, ShieldAlert, Trash2 } from "lucide-react";
 import { boardApiKeysApi } from "@/api/boardApiKeys";
+import { instanceSettingsApi } from "@/api/instanceSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,6 +65,13 @@ export function InstanceApiKeys() {
     queryKey: queryKeys.boardApiKeys.list,
     queryFn: () => boardApiKeysApi.list(),
   });
+
+  const generalSettingsQuery = useQuery({
+    queryKey: queryKeys.instance.generalSettings,
+    queryFn: () => instanceSettingsApi.getGeneral(),
+  });
+
+  const enabled = generalSettingsQuery.data?.boardApiKeysEnabled ?? false;
 
   const createMutation = useMutation({
     mutationFn: ({ name, expiresInDays }: { name: string; expiresInDays: number | null }) =>
@@ -137,11 +145,33 @@ export function InstanceApiKeys() {
             Keys inherit your permissions and company access.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+          disabled={!enabled}
+          title={enabled ? undefined : "Board API keys are disabled in instance general settings"}
+        >
           <Plus className="h-4 w-4 mr-1" />
           Create key
         </Button>
       </div>
+
+      {!enabled && !generalSettingsQuery.isLoading && (
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm flex gap-3">
+          <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-900 dark:text-amber-100">
+              Board API keys are disabled
+            </p>
+            <p className="text-amber-800 dark:text-amber-200 mt-0.5">
+              Creation is blocked and existing keys cannot authenticate. Enable the
+              <span className="font-mono"> Board API keys </span>
+              toggle in Instance Settings &rarr; General to turn this feature on. Existing
+              keys shown below can still be revoked for cleanup.
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">

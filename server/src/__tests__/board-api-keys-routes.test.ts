@@ -25,12 +25,22 @@ const mockBoardAuthService = vi.hoisted(() => ({
   createBoardApiKeyForUser: vi.fn(),
 }));
 
+const mockInstanceSettingsService = vi.hoisted(() => ({
+  getGeneral: vi.fn(),
+  getExperimental: vi.fn(),
+  get: vi.fn(),
+  updateGeneral: vi.fn(),
+  updateExperimental: vi.fn(),
+  listCompanyIds: vi.fn(),
+}));
+
 const mockLogActivity = vi.hoisted(() => vi.fn());
 
 vi.mock("../services/index.js", () => ({
   accessService: () => mockAccessService,
   agentService: () => mockAgentService,
   boardAuthService: () => mockBoardAuthService,
+  instanceSettingsService: () => mockInstanceSettingsService,
   logActivity: mockLogActivity,
   notifyHireApproved: vi.fn(),
   deduplicateAgentName: vi.fn((name: string) => name),
@@ -41,10 +51,21 @@ function registerModuleMocks() {
     accessService: () => mockAccessService,
     agentService: () => mockAgentService,
     boardAuthService: () => mockBoardAuthService,
+    instanceSettingsService: () => mockInstanceSettingsService,
     logActivity: mockLogActivity,
     notifyHireApproved: vi.fn(),
     deduplicateAgentName: vi.fn((name: string) => name),
   }));
+}
+
+function generalWithBoardKeys(enabled: boolean) {
+  return {
+    censorUsernameInLogs: false,
+    keyboardShortcuts: false,
+    feedbackDataSharingPreference: "prompt",
+    backupRetention: { dailyDays: 7, weeklyWeeks: 4, monthlyMonths: 1 },
+    boardApiKeysEnabled: enabled,
+  };
 }
 
 async function createApp(actor: any) {
@@ -109,6 +130,7 @@ describe("board API key routes", () => {
     vi.doUnmock("../middleware/index.js");
     registerModuleMocks();
     vi.resetAllMocks();
+    mockInstanceSettingsService.getGeneral.mockResolvedValue(generalWithBoardKeys(true));
   });
 
   describe("POST /api/board-api-keys", () => {
@@ -220,6 +242,18 @@ describe("board API key routes", () => {
         .send({ name: "" });
 
       expect(res.status).toBe(400);
+    });
+
+    it("rejects when flag is disabled", async () => {
+      mockInstanceSettingsService.getGeneral.mockResolvedValue(generalWithBoardKeys(false));
+      const app = await createApp(SESSION_BOARD_ACTOR);
+      const res = await request(app)
+        .post("/api/board-api-keys")
+        .send({ name: "nope" });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain("disabled");
+      expect(mockBoardAuthService.createBoardApiKeyForUser).not.toHaveBeenCalled();
     });
   });
 

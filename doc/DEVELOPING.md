@@ -472,7 +472,7 @@ Default behavior:
 
 ## Board API Keys
 
-You can create API keys to call the Paperclip REST API from scripts, CI pipelines, or external services without a browser session.
+You can create API keys to call the Paperclip REST API from scripts, CI pipelines, or external services without a browser session. **Disabled by default** — enable the `Board API keys` toggle under **Instance Settings > General** first.
 
 1. Navigate to **Instance Settings > API Keys** in the board UI.
 2. Click **Create key**, enter a name and optional expiry, and copy the token.

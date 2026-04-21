@@ -46,6 +46,7 @@ import {
   agentService,
   boardAuthService,
   deduplicateAgentName,
+  instanceSettingsService,
   logActivity,
   notifyHireApproved
 } from "../services/index.js";
@@ -1579,6 +1580,7 @@ export function accessRoutes(
   const router = Router();
   const access = accessService(db);
   const boardAuth = boardAuthService(db);
+  const instanceSettings = instanceSettingsService(db);
   const agents = agentService(db);
 
   async function assertInstanceAdmin(req: Request) {
@@ -1820,6 +1822,10 @@ export function accessRoutes(
     validate(createBoardApiKeySchema),
     async (req, res) => {
       assertSessionBoard(req);
+      const general = await instanceSettings.getGeneral();
+      if (!general.boardApiKeysEnabled) {
+        throw forbidden("Board API keys are disabled in instance settings");
+      }
       const userId = req.actor.userId!;
       const { name, expiresInDays } = req.body;
       const created = await boardAuth.createBoardApiKeyForUser(

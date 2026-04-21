@@ -410,6 +410,7 @@ Detailed ownership, execution, blocker, and crash-recovery semantics are documen
 - Board has full read/write across all companies in deployment
 - Every board mutation writes to `activity_log`
 - Board API keys (`pcp_board_...`) allow headless access with same permissions as the creating user
+- Feature is gated by `instance_settings.general.boardApiKeysEnabled` (disabled by default). When off, new keys cannot be created and existing keys fail authentication.
 - Keys are created/revoked via UI (Instance Settings > API Keys) or REST endpoints
 - Keys authenticated via bearer token cannot create other keys (privilege laundering prevention)
 - See `doc/BOARD-API-KEYS.md` for full details
