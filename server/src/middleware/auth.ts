@@ -21,15 +21,16 @@ interface ActorMiddlewareOptions {
 export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHandler {
   const boardAuth = boardAuthService(db);
   return async (req, _res, next) => {
+    const runIdHeader = req.header("x-paperclip-run-id");
+    const authHeader = req.header("authorization");
+    const hasBearer = !!authHeader?.toLowerCase().startsWith("bearer ");
+
     req.actor =
-      opts.deploymentMode === "local_trusted"
+      opts.deploymentMode === "local_trusted" && !hasBearer
         ? { type: "board", userId: "local-board", isInstanceAdmin: true, source: "local_implicit" }
         : { type: "none", source: "none" };
 
-    const runIdHeader = req.header("x-paperclip-run-id");
-
-    const authHeader = req.header("authorization");
-    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+    if (!hasBearer) {
       if (opts.deploymentMode === "authenticated" && opts.resolveSession) {
         let session: BetterAuthSessionResult | null = null;
         try {
@@ -76,7 +77,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
       return;
     }
 
-    const token = authHeader.slice("bearer ".length).trim();
+    const token = authHeader!.slice("bearer ".length).trim();
     if (!token) {
       next();
       return;
